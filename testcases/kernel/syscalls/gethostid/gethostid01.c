@@ -26,6 +26,8 @@
 
 #include "tst_test.h"
 
+#ifdef HAVE_SETHOSTID
+
 static long origin;
 static long tc[] = {0x00000000, 0x0000ffff};
 
@@ -64,3 +66,7 @@ static struct tst_test test = {
 	.needs_root = 1,
 	.tcnt = ARRAY_SIZE(tc),
 };
+
+#else
+TST_TEST_TCONF("sethostid is undefined.");
+#endif
