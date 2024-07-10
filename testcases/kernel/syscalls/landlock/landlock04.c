@@ -1,0 +1,176 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+/*
+ * Copyright (C) 2024 SUSE LLC Andrea Cervesato <andrea.cervesato@suse.com>
+ */
+
+/*\
+ * [Description]
+ *
+ * This test verifies that all landlock rules are working properly. The way we
+ * do it is to verify that all disabled syscalls are not working but the one we
+ * enabled via specifc landlock rules.
+ */
+
+#include "landlock_common.h"
+#include "landlock_tester.h"
+
+#define ACCESS_NAME(x) #x
+
+static struct landlock_ruleset_attr *ruleset_attr;
+static struct landlock_path_beneath_attr *path_beneath_attr;
+
+struct rule_access {
+	char *path;
+	int access;
+};
+
+static struct tvariant {
+	int access;
+	char *desc;
+} tvariants[] = {
+	{
+		LANDLOCK_ACCESS_FS_READ_FILE | LANDLOCK_ACCESS_FS_EXECUTE,
+		ACCESS_NAME(LANDLOCK_ACCESS_FS_EXECUTE)
+	},
+	{
+		LANDLOCK_ACCESS_FS_WRITE_FILE,
+		ACCESS_NAME(LANDLOCK_ACCESS_FS_WRITE_FILE)
+	},
+	{
+		LANDLOCK_ACCESS_FS_READ_FILE,
+		ACCESS_NAME(LANDLOCK_ACCESS_FS_READ_FILE)
+	},
+	{
+		LANDLOCK_ACCESS_FS_READ_DIR,
+		ACCESS_NAME(LANDLOCK_ACCESS_FS_READ_DIR)
+	},
+	{
+		LANDLOCK_ACCESS_FS_REMOVE_DIR,
+		ACCESS_NAME(LANDLOCK_ACCESS_FS_REMOVE_DIR)
+	},
+	{
+		LANDLOCK_ACCESS_FS_REMOVE_FILE,
+		ACCESS_NAME(LANDLOCK_ACCESS_FS_REMOVE_FILE)
+	},
+	{
+		LANDLOCK_ACCESS_FS_MAKE_CHAR,
+		ACCESS_NAME(LANDLOCK_ACCESS_FS_MAKE_CHAR)
+	},
+	{
+		LANDLOCK_ACCESS_FS_MAKE_BLOCK,
+		ACCESS_NAME(LANDLOCK_ACCESS_FS_MAKE_BLOCK)
+	},
+	{
+		LANDLOCK_ACCESS_FS_MAKE_REG,
+		ACCESS_NAME(LANDLOCK_ACCESS_FS_MAKE_REG)
+	},
+	{
+		LANDLOCK_ACCESS_FS_MAKE_SOCK,
+		ACCESS_NAME(LANDLOCK_ACCESS_FS_MAKE_SOCK)
+	},
+	{
+		LANDLOCK_ACCESS_FS_MAKE_FIFO,
+		ACCESS_NAME(LANDLOCK_ACCESS_FS_MAKE_FIFO)
+	},
+	{
+		LANDLOCK_ACCESS_FS_MAKE_SYM,
+		ACCESS_NAME(LANDLOCK_ACCESS_FS_MAKE_SYM)
+	},
+	{
+		LANDLOCK_ACCESS_FS_WRITE_FILE | LANDLOCK_ACCESS_FS_TRUNCATE,
+		ACCESS_NAME(LANDLOCK_ACCESS_FS_TRUNCATE)
+	},
+};
+
+static void run(void)
+{
+	if (!SAFE_FORK()) {
+		struct tvariant  variant = tvariants[tst_variant];
+
+		tester_run_all_rules(variant.access);
+		_exit(0);
+	}
+}
+
+static void setup(void)
+{
+	struct tvariant variant = tvariants[tst_variant];
+	int ruleset_fd;
+
+	verify_landlock_is_enabled();
+	tester_create_tree();
+
+	tst_res(TINFO, "Testing %s", variant.desc);
+
+	ruleset_attr->handled_access_fs = tester_get_all_rules();
+
+	ruleset_fd = SAFE_LANDLOCK_CREATE_RULESET(
+		ruleset_attr, sizeof(struct landlock_ruleset_attr), 0);
+
+	/* since our binary is dynamically linked, we need to enable libraries
+	 * to be read and executed
+	 */
+	struct rule_access rules[] = {
+		{"/lib", LANDLOCK_ACCESS_FS_READ_FILE | LANDLOCK_ACCESS_FS_EXECUTE},
+		{"/lib64", LANDLOCK_ACCESS_FS_READ_FILE | LANDLOCK_ACCESS_FS_EXECUTE},
+		{SANDBOX_FOLDER, variant.access}
+	};
+	int num_of_rules = ARRAY_SIZE(rules);
+
+	for (int i = 0; i < num_of_rules; i++) {
+		if (access(rules[i].path, F_OK) == -1)
+			continue;
+
+		path_beneath_attr->allowed_access = rules[i].access;
+		path_beneath_attr->parent_fd = SAFE_OPEN(rules[i].path, O_PATH | O_CLOEXEC);
+
+		SAFE_LANDLOCK_ADD_RULE(
+			ruleset_fd,
+			LANDLOCK_RULE_PATH_BENEATH,
+			path_beneath_attr,
+			0);
+
+		SAFE_CLOSE(path_beneath_attr->parent_fd);
+	}
+
+	enforce_ruleset(ruleset_fd);
+	SAFE_CLOSE(ruleset_fd);
+}
+
+static struct tst_test test = {
+	.test_all = run,
+	.setup = setup,
+	.min_kver = "5.13",
+	.forks_child = 1,
+	.needs_tmpdir = 1,
+	.needs_root = 1,
+	.test_variants = ARRAY_SIZE(tvariants),
+	.resource_files = (const char *[]) {
+		TESTAPP,
+		NULL,
+	},
+	.needs_kconfigs = (const char *[]) {
+		"CONFIG_SECURITY_LANDLOCK=y",
+		NULL
+	},
+	.bufs = (struct tst_buffers []) {
+		{&ruleset_attr, .size = sizeof(struct landlock_ruleset_attr)},
+		{&path_beneath_attr, .size = sizeof(struct landlock_path_beneath_attr)},
+		{},
+	},
+	.caps = (struct tst_cap []) {
+		TST_CAP(TST_CAP_REQ, CAP_SYS_ADMIN),
+		TST_CAP(TST_CAP_REQ, CAP_MKNOD),
+		{}
+	},
+	.format_device = 1,
+	.mount_device = 1,
+	.mntpoint = SANDBOX_FOLDER,
+	.all_filesystems = 1,
+	.skip_filesystems = (const char *[]) {
+		"vfat",
+		"exfat",
+		NULL
+	},
+	.max_runtime = 3600,
+};
