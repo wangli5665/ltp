@@ -164,8 +164,10 @@ static void run(unsigned int i)
 	if (tst_is_virt(VIRT_ANY)) {
 		float rem_p = 1 - tst_remaining_runtime() / pair.exec_time_start;
 
-		if (pair.exec_loop > pair.exec_loops || rem_p >= 1)
-			tst_brk(TCONF, "Sorry, test wasn't able to generate valid result");
+		if (pair.exec_loop > pair.exec_loops || rem_p >= 1) {
+			tst_res(TCONF, "Sorry, test wasn't able to generate valid result");
+			return;
+		}
 	}
 
 	tst_res(critical > 50 ? TPASS : TFAIL, "%d| =:%-4d", i, critical);
