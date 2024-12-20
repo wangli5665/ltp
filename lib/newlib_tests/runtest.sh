@@ -20,6 +20,8 @@ tst_bool_expr
 tst_capability02
 tst_device
 tst_expiration_timer
+tst_fuzzy_sync01
+tst_fuzzy_sync02
 tst_fuzzy_sync03
 tst_needs_cmds0[1-36-8]
 tst_res_hexd

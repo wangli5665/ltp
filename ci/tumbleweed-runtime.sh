@@ -10,6 +10,7 @@ $zyp \
 	libaio1 \
 	libmnl0 \
 	libnuma1 \
-	libtirpc3
+	libtirpc3 \
+	systemd
 
 useradd ltp

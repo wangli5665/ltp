@@ -31,6 +31,7 @@ pkg_minimal="
 	linux-libc-dev
 	lsb-release
 	pkg-config
+	systemd
 "
 
 pkg_nonessential="

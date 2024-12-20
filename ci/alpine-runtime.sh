@@ -13,6 +13,7 @@ apk add \
         libtirpc \
         numactl \
         openssl \
+	systemd \
         py3-msgpack
 
 adduser -D -g "Unprivileged LTP user" ltp
