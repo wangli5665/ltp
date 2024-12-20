@@ -216,6 +216,11 @@ static void run(unsigned int i)
 		}
 	}
 
+	if (tst_is_virt(VIRT_ANY)) {
+		if (pair.exec_loop > pair.exec_loops)
+			tst_brk(TCONF, "Sorry, test wasn't able to generate valid result");
+	}
+
 	tst_res(critical > 50 ? TPASS : TFAIL,
 		"acs:%-2d act:%-2d art:%-2d | =:%-4d -:%-4d +:%-4d",
 		a.critical_s, a.critical_t, a.return_t,
