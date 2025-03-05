@@ -4,7 +4,9 @@
 
 . tst_env.sh
 
-. "$1"
+script="$1"
+shift
+. "$script"
 
 if [ -n "$TST_CLEANUP" ]; then
 	trap $TST_CLEANUP EXIT
@@ -14,6 +16,6 @@ if [ -n "$TST_SETUP" ]; then
     $TST_SETUP
 fi
 
-tst_test
+tst_test "$@"
 
 # vim: set ft=sh ts=4 sts=4 sw=4 expandtab :
