@@ -17,7 +17,11 @@
 #include "lapi/syscalls.h"
 #include "lapi/futex.h"
 
+#define TLS_SIZE 4096
+#define TLS_ALIGN 16
+
 static pid_t ptid, ctid, tgid;
+static void *tls_ptr;
 static void *child_stack;
 
 static void test_clone_parent(int t);
@@ -31,6 +35,9 @@ static int child_clone_parent_settid(void *);
 
 static void test_clone_thread(int t);
 static int child_clone_thread(void *);
+
+/* TLS variable to validate in child */
+static __thread int tls_test_var = 12345;
 
 /*
  * Children cloned with CLONE_VM should avoid using any functions that
@@ -46,14 +53,14 @@ static struct test_case {
 	void (*testfunc)(int);
 	int (*do_child)(void *);
 } test_cases[] = {
-	{"CLONE_PARENT", CLONE_PARENT | SIGCHLD,
+	{"CLONE_PARENT", CLONE_PARENT | CLONE_SETTLS | SIGCHLD,
 	 test_clone_parent, child_clone_parent},
-	{"CLONE_CHILD_SETTID", CLONE_CHILD_SETTID | SIGCHLD,
+	{"CLONE_CHILD_SETTID", CLONE_CHILD_SETTID | CLONE_SETTLS | SIGCHLD,
 	 test_clone_tid, child_clone_child_settid},
-	{"CLONE_PARENT_SETTID", CLONE_PARENT_SETTID | CLONE_VM | SIGCHLD,
+	{"CLONE_PARENT_SETTID", CLONE_PARENT_SETTID | CLONE_VM | CLONE_SETTLS | SIGCHLD,
 	 test_clone_tid, child_clone_parent_settid},
 	{"CLONE_THREAD", CLONE_THREAD | CLONE_SIGHAND | CLONE_VM |
-	 CLONE_CHILD_CLEARTID | SIGCHLD,
+	 CLONE_CHILD_CLEARTID | CLONE_SETTLS | SIGCHLD,
 	 test_clone_thread, child_clone_thread},
 };
 
@@ -66,17 +73,24 @@ static void do_test(unsigned int i)
 static void setup(void)
 {
 	child_stack = SAFE_MALLOC(CHILD_STACK_SIZE);
+	tls_ptr = aligned_alloc(TLS_ALIGN, TLS_SIZE);
+	if (!tls_ptr) {
+		perror("aligned_alloc");
+		exit(EXIT_FAILURE);
+	}
+	memset(tls_ptr, 0, TLS_SIZE);
 }
 
 static void cleanup(void)
 {
 	free(child_stack);
+	free(tls_ptr);
 }
 
 static long clone_child(const struct test_case *t)
 {
 	TEST(ltp_clone7(t->flags, t->do_child, NULL, CHILD_STACK_SIZE,
-		child_stack, &ptid, NULL, &ctid));
+		child_stack, &ptid, tls_ptr, &ctid));
 
 	if (TST_RET == -1 && TTERRNO == ENOSYS)
 		tst_brk(TCONF, "clone does not support 7 args");
@@ -85,6 +99,14 @@ static long clone_child(const struct test_case *t)
 		tst_brk(TBROK | TTERRNO, "%s clone() failed", t->name);
 
 	return TST_RET;
+}
+
+static void validate_tls(void)
+{
+	if (tls_test_var == 12345)
+		tst_res(TPASS, "Child TLS variable has expected value");
+	else
+		tst_res(TFAIL, "Child TLS variable corrupted or not set");
 }
 
 static void test_clone_parent(int t)
@@ -102,6 +124,8 @@ static void test_clone_parent(int t)
 
 static int child_clone_parent(void *arg LTP_ATTRIBUTE_UNUSED)
 {
+	validate_tls();
+
 	if (parent_ppid == getppid()) {
 		tst_res(TPASS, "clone and forked child has the same parent");
 	} else {
@@ -120,6 +144,8 @@ static void test_clone_tid(int t)
 
 static int child_clone_child_settid(void *arg LTP_ATTRIBUTE_UNUSED)
 {
+	validate_tls();
+
 	if (ctid == tst_syscall(__NR_getpid))
 		tst_res(TPASS, "clone() correctly set ctid");
 	else
@@ -130,6 +156,8 @@ static int child_clone_child_settid(void *arg LTP_ATTRIBUTE_UNUSED)
 
 static int child_clone_parent_settid(void *arg LTP_ATTRIBUTE_UNUSED)
 {
+	validate_tls();
+
 	if (ptid == tst_syscall(__NR_getpid))
 		tst_res(TPASS, "clone() correctly set ptid");
 	else
@@ -175,6 +203,8 @@ static void test_clone_thread(int t)
 
 static int child_clone_thread(void *arg LTP_ATTRIBUTE_UNUSED)
 {
+	validate_tls();
+
 	if (tgid == tst_syscall(__NR_getpid))
 		tst_res(TPASS, "clone has the same thread id");
 	else

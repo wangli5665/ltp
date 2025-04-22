@@ -18,10 +18,15 @@
 
 #define CHILD_SIGNAL	SIGUSR1
 #define DATA	777
+#define TLS_SIZE 4096
+#define TLS_ALIGN 16
 
 static int pidfd, child_tid, parent_tid, parent_received_signal;
 static volatile int child_received_signal, child_data;
 static struct clone_args *args;
+
+/* TLS variable to validate in child */
+static __thread int tls_test_var = 12345;
 
 static struct tcase {
 	uint64_t flags;
@@ -29,10 +34,21 @@ static struct tcase {
 } tcases[] = {
 	{0, SIGCHLD},
 	{0, SIGUSR2},
-	{CLONE_FS, SIGCHLD},
-	{CLONE_NEWPID, SIGCHLD},
-	{CLONE_PARENT_SETTID | CLONE_CHILD_SETTID | CLONE_PIDFD, SIGCHLD},
+	{CLONE_FS | CLONE_SETTLS, SIGCHLD},
+	{CLONE_NEWPID | CLONE_SETTLS, SIGCHLD},
+	{CLONE_PARENT_SETTID | CLONE_CHILD_SETTID | CLONE_PIDFD | CLONE_SETTLS, SIGCHLD},
 };
+
+static void *allocate_tls_region(void)
+{
+	void *tls_area = aligned_alloc(TLS_ALIGN, TLS_SIZE);
+	if (!tls_area) {
+		perror("aligned_alloc");
+		exit(EXIT_FAILURE);
+	}
+	memset(tls_area, 0, TLS_SIZE);
+	return tls_area;
+}
 
 static void parent_rx_signal(int sig)
 {
@@ -66,6 +82,13 @@ static siginfo_t uinfo = {
 static void do_child(int clone_pidfd)
 {
 	int count = 1000;
+
+	/* Validate TLS usage */
+	if (tls_test_var == 12345) {
+		tst_res(TPASS, "Child TLS variable has expected value");
+	} else {
+		tst_res(TFAIL, "Child TLS variable corrupted or not set");
+	}
 
 	if (clone_pidfd) {
 		child_received_signal = 0;
@@ -111,6 +134,8 @@ static void run(unsigned int n)
 	int status, clone_pidfd = tc->flags & CLONE_PIDFD;
 	pid_t pid;
 
+	void *tls_ptr = allocate_tls_region();
+
 	args->flags = tc->flags;
 	args->pidfd = (uint64_t)(&pidfd);
 	args->child_tid = (uint64_t)(&child_tid);
@@ -118,7 +143,7 @@ static void run(unsigned int n)
 	args->exit_signal = tc->exit_signal;
 	args->stack = 0;
 	args->stack_size = 0;
-	args->tls = 0;
+	args->tls = (uint64_t)tls_ptr;
 
 	parent_received_signal = 0;
 	SAFE_SIGACTION(tc->exit_signal, &psig_action, NULL);
@@ -126,6 +151,7 @@ static void run(unsigned int n)
 	TEST(pid = clone3(args, sizeof(*args)));
 	if (pid < 0) {
 		tst_res(TFAIL | TTERRNO, "clone3() failed (%d)", n);
+		free(tls_ptr);
 		return;
 	}
 
@@ -139,11 +165,13 @@ static void run(unsigned int n)
 		TEST(pidfd_send_signal(pidfd, CHILD_SIGNAL, &uinfo, 0));
 		if (TST_RET != 0) {
 			tst_res(TFAIL | TTERRNO, "pidfd_send_signal() failed");
+			free(tls_ptr);
 			return;
 		}
 	}
 
 	SAFE_WAITPID(pid, &status, __WALL);
+	free(tls_ptr);
 
 	if (!parent_received_signal) {
 		tst_res(TFAIL, "Parent haven't got signal");
