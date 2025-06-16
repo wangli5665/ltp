@@ -40,6 +40,37 @@ static int get_val(const char *name, const char *arg, unsigned int *val)
 	return 0;
 }
 
+static int is_shell_checkpoint_file(void)
+{
+	int fd;
+	char magic_buf[4];
+	const char *path = getenv("LTP_IPC_PATH");
+
+	if (!path)
+		tst_brk(TBROK, "LTP_IPC_PATH is not set");
+
+	fd = SAFE_OPEN(path, O_RDONLY);
+	SAFE_READ(1, fd, magic_buf, 4);
+	SAFE_CLOSE(fd);
+
+	if (!memcmp(magic_buf, "LTPM", 4)) {
+		tst_res(TINFO, "Detected Shell checkpoint file (magic = LTPM)");
+		return 1;
+	} else {
+		uint32_t magic_val;
+		memcpy(&magic_val, magic_buf, sizeof(uint32_t));
+
+		if (magic_val == 0x4C54504D) {
+			tst_res(TINFO, "Detected C checkpoint file (magic = 0x4C54504D)");
+			return 0;
+		}
+
+		tst_brk(TBROK, "Unrecognized checkpoint file magic: 0x%08X", magic_val);
+	}
+
+	return -1;
+}
+
 int main(int argc, char *argv[])
 {
 	unsigned int id, timeout, nr_wake;
@@ -78,7 +109,11 @@ int main(int argc, char *argv[])
 		goto help;
 	}
 
-	tst_checkpoint_reinit(__FILE__, __LINE__, NULL);
+	/* Re-init checkpoint file based on its format (Shell or C) */
+	if (is_shell_checkpoint_file())
+		tst_checkpoint_reinit(__FILE__, __LINE__, NULL);
+	else
+		tst_reinit();
 
 	if (type == 0)
 		ret = tst_checkpoint_wait(id, timeout);
