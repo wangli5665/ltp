@@ -9,11 +9,14 @@
 #include <stdlib.h>
 #define TST_NO_DEFAULT_MAIN
 #include "tst_test.h"
+#include "tst_checkpoint.h"
 
 static void print_help(void)
 {
-	printf("Usage: tst_checkpoint wait TIMEOUT ID\n");
+	printf("Usage: tst_checkpoint init\n");
+	printf("   or: tst_checkpoint wait TIMEOUT ID\n");
 	printf("   or: tst_checkpoint wake TIMEOUT ID NR_WAKE\n");
+	printf("Arguments:\n");
 	printf("       TIMEOUT - timeout in ms\n");
 	printf("       ID - checkpoint id\n");
 	printf("       NR_WAKE - number of processes to wake up\n");
@@ -43,8 +46,13 @@ int main(int argc, char *argv[])
 	int ret;
 	int type;
 
-	if (argc < 3)
-		goto help;
+	if (!strcmp(argv[1], "init")) {
+		if (argc != 2)
+			goto help;
+
+		tst_checkpoint_init(__FILE__, __LINE__, NULL);
+		return 0;
+	}
 
 	if (!strcmp(argv[1], "wait")) {
 		type = 0;
@@ -70,17 +78,14 @@ int main(int argc, char *argv[])
 		goto help;
 	}
 
-	tst_reinit();
+	tst_checkpoint_reinit(__FILE__, __LINE__, NULL);
 
-	if (type)
-		ret = tst_checkpoint_wake(id, nr_wake, timeout);
-	else
+	if (type == 0)
 		ret = tst_checkpoint_wait(id, timeout);
-
-	if (ret)
-		return 1;
 	else
-		return 0;
+		ret = tst_checkpoint_wake(id, nr_wake, timeout);
+
+	return ret ? 1 : 0;
 
 help:
 	print_help();

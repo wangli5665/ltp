@@ -6,12 +6,28 @@
 #define TST_CHECKPOINT_FN__
 
 /*
- * Checkpoint initializaton, must be done first.
+ * Checkpoint initialization.
  *
- * NOTE: tst_tmpdir() must be called beforehand.
+ * This function sets up the shared memory region used for process
+ * synchronization via futexes. It must be called before any checkpoint
+ * operations such as tst_checkpoint_wait() or tst_checkpoint_wake().
  */
 void tst_checkpoint_init(const char *file, const int lineno,
 			 void (*cleanup_fn)(void));
+
+/*
+ * Checkpoint reinitialization.
+ *
+ * This function re-attaches to an existing shared memory checkpoint region
+ * pointed to by the LTP_IPC_PATH environment variable. It is typically used
+ * in child processes (e.g., shell scripts) to synchronize with the main test.
+ *
+ * The function verifies the magic header in the shared memory file and maps
+ * the futex array into memory. It must be called before using checkpoint
+ * operations in a process that did not perform the original initialization.
+ */
+void tst_checkpoint_reinit(const char *file, const int lineno,
+			   void (*cleanup_fn)(void));
 
 /*
  * Waits for wakeup.

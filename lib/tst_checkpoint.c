@@ -38,8 +38,9 @@ unsigned int tst_max_futexes;
 void tst_checkpoint_init(const char *file, const int lineno,
                          void (*cleanup_fn)(void))
 {
+	char *path = getenv("LTP_IPC_PATH");
+	size_t page_size = getpagesize();
 	int fd;
-	unsigned int page_size;
 
 	if (tst_futexes) {
 		tst_brkm_(file, lineno, TBROK, cleanup_fn,
@@ -47,35 +48,58 @@ void tst_checkpoint_init(const char *file, const int lineno,
 		return;
 	}
 
-	/*
-	 * The parent test process is responsible for creating the temporary
-	 * directory and therefore must pass non-zero cleanup (to remove the
-	 * directory if something went wrong).
-	 *
-	 * We cannot do this check unconditionally because if we need to init
-	 * the checkpoint from a binary that was started by exec() the
-	 * tst_tmpdir_created() will return false because the tmpdir was
-	 * created by parent. In this case we expect the subprogram can call
-	 * the init as a first function with NULL as cleanup function.
-	 */
-	if (cleanup_fn && !tst_tmpdir_created()) {
-		tst_brkm_(file, lineno, TBROK, cleanup_fn,
-			"You have to create test temporary directory "
-			"first (call tst_tmpdir())");
-		return;
+	if (!path) {
+		char *tmp_path = NULL;
+
+		if (!tst_tmpdir_created())
+			tst_tmpdir();
+
+		safe_asprintf(__FILE__, __LINE__, cleanup_fn, &tmp_path,
+				"%s/ltp_checkpoint", tst_get_tmpdir());
+		path = tmp_path;
 	}
 
-	page_size = getpagesize();
-
-	fd = SAFE_OPEN(cleanup_fn, "checkpoint_futex_base_file",
-	               O_RDWR | O_CREAT, 0666);
-
-	SAFE_FTRUNCATE(cleanup_fn, fd, page_size);
+	fd = SAFE_OPEN(cleanup_fn, path, O_RDWR | O_CREAT, 0666);
+	SAFE_WRITE(cleanup_fn, 1, fd, "LTPM", 4);
 
 	tst_futexes = SAFE_MMAP(cleanup_fn, NULL, page_size,
-	                    PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+				PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 
-	tst_max_futexes = page_size / sizeof(uint32_t);
+	tst_futexes = (futex_t *)((char *)tst_futexes + 4);
+	tst_max_futexes = (page_size - 4) / sizeof(futex_t);
+
+	SAFE_CLOSE(cleanup_fn, fd);
+}
+
+void tst_checkpoint_reinit(const char *file, const int lineno,
+			   void (*cleanup_fn)(void))
+{
+	const char *path = getenv("LTP_IPC_PATH");
+	size_t page_size = getpagesize();
+	int fd;
+
+	if (!path) {
+		tst_brkm_(file, lineno, TBROK, cleanup_fn,
+				"LTP_IPC_PATH is not defined");
+	}
+
+	if (access(path, F_OK)) {
+		tst_brkm_(file, lineno, TBROK, cleanup_fn,
+				"File %s does not exist!", path);
+	}
+
+	fd = SAFE_OPEN(cleanup_fn, path, O_RDWR);
+	tst_futexes = SAFE_MMAP(cleanup_fn, NULL, page_size,
+			PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+
+	char *ptr = (char *)tst_futexes;
+	if (memcmp(ptr, "LTPM", 4) != 0) {
+		tst_brkm_(file, lineno, TBROK, cleanup_fn,
+				"Invalid shared memory region (bad magic)");
+	}
+
+	tst_futexes = (futex_t *)((char *)tst_futexes + 4);
+	tst_max_futexes = (page_size - 4) / sizeof(futex_t);
 
 	SAFE_CLOSE(cleanup_fn, fd);
 }

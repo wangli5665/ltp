@@ -629,6 +629,8 @@ _tst_init_checkpoints()
 	ROD_SILENT dd if=/dev/zero of="$LTP_IPC_PATH" bs="$pagesize" count=1
 	ROD_SILENT chmod 600 "$LTP_IPC_PATH"
 	export LTP_IPC_PATH
+
+	tst_checkpoint init
 }
 
 _prepare_device()
