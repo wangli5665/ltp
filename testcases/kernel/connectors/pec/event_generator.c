@@ -18,6 +18,7 @@
 
 #define TST_NO_DEFAULT_MAIN
 #include "tst_test.h"
+#include "tst_checkpoint.h"
 
 extern struct tst_test *tst_test;
 static struct tst_test test = {
@@ -186,7 +187,7 @@ int main(int argc, char **argv)
 
 	/* ready to generate events */
 	if (checkpoint_id != -1) {
-		tst_reinit();
+		tst_checkpoint_reinit(__FILE__, __LINE__, NULL);
 		TST_CHECKPOINT_WAIT(checkpoint_id);
 	}
 

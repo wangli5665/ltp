@@ -19,6 +19,7 @@
 #include <signal.h>
 #include <linux/types.h>
 #include <linux/netlink.h>
+
 #define TST_NO_DEFAULT_MAIN
 #include "tst_test.h"
 #include "tst_checkpoint.h"
@@ -307,7 +308,7 @@ int main(int argc, char * const argv[])
 
 	/* ready to receive events */
 	if (checkpoint_id != -1) {
-		tst_reinit();
+		tst_checkpoint_reinit(__FILE__, __LINE__, NULL);
 		TST_CHECKPOINT_WAKE(0);
 	}
 
