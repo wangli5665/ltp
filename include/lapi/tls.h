@@ -5,11 +5,11 @@
  */
 
 /*\
- * tls init/alloc/free common functions
+ * CLONE_SETTLS init/alloc/free common functions.
  */
 
-#ifndef _LAPI_TLS_H
-#define _LAPI_TLS_H
+#ifndef LAPI_TLS_H__
+#define LAPI_TLS_H__
 
 #include <stdlib.h>
 #include <string.h>
@@ -27,17 +27,15 @@
 #define TLS_ALIGN 16
 
 #if defined(__x86_64__)
-// Structure mimicking glibc's TCB to be simplified for x86_64
 typedef struct {
-    void *tcb;
-    void *dtv;
-    void *self;
-    int multiple_threads;
-    char padding[64];
+	void *tcb;
+	void *dtv;
+	void *self;
+	int multiple_threads;
+	char padding[64];
 } tcb_t;
 #endif
 
-// Global pointers for TLS management
 extern void *tls_ptr;
 extern struct user_desc *tls_desc;
 
@@ -49,7 +47,6 @@ static inline void *allocate_tls_area(void)
 	memset(tls_area, 0, TLS_SIZE);
 
 #if defined(__x86_64__)
-	// Set up a minimal TCB for x86_64
 	tcb_t *tcb = (tcb_t *)tls_area;
 	tcb->tcb = tls_area;
 	tcb->self = tls_area;
@@ -84,7 +81,8 @@ static inline void init_tls(void)
 
 static inline void free_tls(void)
 {
-	usleep(1000);
+	usleep(10000);
+
 #if defined(__x86_64__) || defined(__aarch64__) || defined(__s390x__)
 	if (tls_ptr) {
 		free(tls_ptr);
@@ -99,4 +97,4 @@ static inline void free_tls(void)
 #endif
 }
 
-#endif // _LAPI_TLS_H
+#endif /* LAPI_TLS_H__ */

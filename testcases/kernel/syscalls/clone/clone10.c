@@ -17,10 +17,6 @@
 #include <sched.h>
 #include <sys/wait.h>
 
-#if defined(__i386__)
-#include <asm/ldt.h>
-#endif
-
 #include "tst_test.h"
 #include "clone_platform.h"
 #include "lapi/syscalls.h"
@@ -32,7 +28,6 @@
 #define ARCH_SET_FS 0x1002
 #endif
 
-// Global pointers for TLS management
 void *tls_ptr;
 struct user_desc *tls_desc;
 
@@ -46,15 +41,15 @@ static int flags = CLONE_THREAD |  CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SIG
 static int touch_tls_in_child(void *arg LTP_ATTRIBUTE_UNUSED)
 {
 #if defined(__x86_64__)
-	// Set the %fs register to point to the TCB
 	if (syscall(SYS_arch_prctl, ARCH_SET_FS, tls_ptr) == -1)
 		exit(EXIT_FAILURE);
 #endif
 	tls_var = TLS_EXP + 1;
-	tst_res(TINFO, "Child (PID: %d, TID: %d): TLS value set to: %d", getpid(), (pid_t)syscall(SYS_gettid), tls_var);
+	tst_res(TINFO, "Child (PID: %d, TID: %d): TLS value set to: %d", getpid(),  (pid_t)syscall(SYS_gettid), tls_var);
 
 	TST_CHECKPOINT_WAKE(0);
 	free_tls();
+
 	tst_syscall(__NR_exit, 0);
 	return 0;
 }
@@ -71,12 +66,10 @@ static void verify_tls(void)
 	TST_CHECKPOINT_WAIT(0);
 
 	if (tls_var == TLS_EXP) {
-		tst_res(TPASS,
-			"Parent (PID: %d, TID: %d): TLS value correct: %d",
+		tst_res(TPASS, "Parent (PID: %d, TID: %d): TLS value correct: %d",
 			getpid(), (pid_t)syscall(SYS_gettid), tls_var);
 	} else {
-		tst_res(TFAIL,
-			"Parent (PID: %d, TID: %d): TLS value mismatch: got %d, expected %d",
+		tst_res(TFAIL, "Parent (PID: %d, TID: %d): TLS value mismatch: got %d, expected %d",
 			getpid(), (pid_t)syscall(SYS_gettid), tls_var, TLS_EXP);
 	}
 }
@@ -93,8 +86,8 @@ static void cleanup(void)
 }
 
 static struct tst_test test = {
-	    .setup = setup,
-	    .cleanup = cleanup,
-	    .needs_checkpoints = 1,
-	    .test_all = verify_tls,
+	.setup = setup,
+	.cleanup = cleanup,
+	.needs_checkpoints = 1,
+	.test_all = verify_tls,
 };
