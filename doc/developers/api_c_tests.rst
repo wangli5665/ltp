@@ -62,4 +62,4 @@ Temporary directory
 
 LTP libraries
 -------------
-.. kernel-doc:: ../../include/libswap.h
+.. kernel-doc:: ../../include/tse_swap.h
