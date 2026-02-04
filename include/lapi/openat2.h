@@ -7,12 +7,12 @@
 #ifndef LAPI_OPENAT2_H__
 #define LAPI_OPENAT2_H__
 
+#include "config.h"
 #include <sys/syscall.h>
 #include <linux/types.h>
 
 #include "lapi/syscalls.h"
-
-#include "config.h"
+#include "lapi/fcntl.h"
 
 #ifndef HAVE_OPENAT2
 /*
