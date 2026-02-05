@@ -48,7 +48,6 @@
 #include <sys/ioctl.h>
 #include <sys/wait.h>
 #include <sys/types.h>
-#include <fcntl.h>
 #include <stdlib.h>
 #include <dirent.h>
 #include <errno.h>

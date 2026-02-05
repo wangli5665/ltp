@@ -3,6 +3,11 @@
  * Copyright (c) 2021 Linux Test Project
  */
 
+#ifdef HAVE_NUMA_V2
+# include <numa.h>
+# include <numaif.h>
+#endif
+
 #ifndef LAPI_NUMAIF_H__
 #define LAPI_NUMAIF_H__
 

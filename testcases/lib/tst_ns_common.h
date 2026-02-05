@@ -5,7 +5,6 @@
 
 #ifndef TST_NS_COMMON_H__
 #define TST_NS_COMMON_H__
-#include <sched.h>
 #include "lapi/sched.h"
 
 #define PROC_PATH "/proc"

@@ -7,10 +7,6 @@
 #include <stdio.h>
 #include <ctype.h>
 #include "config.h"
-#ifdef HAVE_NUMA_V2
-# include <numa.h>
-# include <numaif.h>
-#endif
 
 #define TST_NO_DEFAULT_MAIN
 #include "tst_test.h"

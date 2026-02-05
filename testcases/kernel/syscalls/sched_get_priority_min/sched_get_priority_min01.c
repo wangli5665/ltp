@@ -14,7 +14,6 @@
 
 #define _GNU_SOURCE
 
-#include <sched.h>
 #include "tst_test.h"
 #include "lapi/sched.h"
 

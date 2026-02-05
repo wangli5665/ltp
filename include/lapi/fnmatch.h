@@ -7,6 +7,8 @@
 #ifndef LAPI_FNMATCH_H__
 #define LAPI_FNMATCH_H__
 
+#include <fnmatch.h>
+
 #ifndef FNM_EXTMATCH
 #define FNM_EXTMATCH 0
 #endif

@@ -30,7 +30,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
-#include <fnmatch.h>
 #include <lapi/fnmatch.h>
 #include <stdlib.h>
 #include <stdio.h>

@@ -9,7 +9,6 @@
  * Check that dnotify DN_RENAME event is reported only on rename inside same parent.
  */
 
-#include <fcntl.h>
 #include <signal.h>
 #include <stdio.h>
 #include <unistd.h>

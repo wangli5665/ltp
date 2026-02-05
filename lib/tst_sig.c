@@ -69,7 +69,6 @@
 
 #include <errno.h>
 #include <string.h>
-#include <signal.h>
 #include <unistd.h>
 #include "test.h"
 #include "lapi/signal.h"
