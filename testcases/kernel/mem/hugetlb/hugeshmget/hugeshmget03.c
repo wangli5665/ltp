@@ -19,7 +19,6 @@
  * depending on the system being tested.
  */
 #define MAXIDS	8192
-#define PATH_SHMMNI	"/proc/sys/kernel/shmmni"
 
 static size_t shm_size;
 static int shm_id_1 = -1;

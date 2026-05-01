@@ -33,7 +33,7 @@
 #include "tst_test.h"
 #include "lapi/mmap.h"
 
-#define CORE_PATTERN "/proc/sys/kernel/core_pattern"
+#define CORE_PATTERN PATH_CORE_PATTERN
 #define CORE_FILTER "/proc/self/coredump_filter"
 #define YCOUNT 0x500L
 #define FMEMSIZE (YCOUNT + 0x2L)

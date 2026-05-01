@@ -14,7 +14,7 @@ static pid_t pid_max;
 
 static void setup(void)
 {
-	SAFE_FILE_SCANF("/proc/sys/kernel/pid_max", "%d\n", &pid_max);
+	SAFE_FILE_SCANF(PATH_PID_MAX, "%d\n", &pid_max);
 }
 
 static void verify_getpid(void)

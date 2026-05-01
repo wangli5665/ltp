@@ -78,8 +78,8 @@ static void test_ksm(void)
 
 	numa_free_nodemask(bm);
 
-	SAFE_FILE_PRINTF(PATH_KSM "sleep_millisecs", "0");
-	SAFE_FILE_PRINTF(PATH_KSM "pages_to_scan", "%ld",
+	SAFE_FILE_PRINTF(MM_KSM_FP("sleep_millisecs"), "0");
+	SAFE_FILE_PRINTF(MM_KSM_FP("pages_to_scan"), "%ld",
 			 nr_pages * nodes->cnt);
 	/*
 	 * merge_across_nodes and max_page_sharing setting can be changed
@@ -87,24 +87,24 @@ static void test_ksm(void)
 	 * to unmerge pages first, then to 1 after changing merge_across_nodes,
 	 * to remerge according to the new setting.
 	 */
-	SAFE_FILE_PRINTF(PATH_KSM "run", "2");
-	if (access(PATH_KSM "max_page_sharing", F_OK) == 0)
-		SAFE_FILE_PRINTF(PATH_KSM "max_page_sharing",
+	SAFE_FILE_PRINTF(MM_KSM_FP("run"), "2");
+	if (access(MM_KSM_FP("max_page_sharing"), F_OK) == 0)
+		SAFE_FILE_PRINTF(MM_KSM_FP("max_page_sharing"),
 			"%ld", nr_pages * nodes->cnt);
 	tst_res(TINFO, "Start to test KSM with merge_across_nodes=1");
-	SAFE_FILE_PRINTF(PATH_KSM "merge_across_nodes", "1");
-	SAFE_FILE_PRINTF(PATH_KSM "run", "1");
+	SAFE_FILE_PRINTF(MM_KSM_FP("merge_across_nodes"), "1");
+	SAFE_FILE_PRINTF(MM_KSM_FP("run"), "1");
 	ksm_group_check(1, 1, nr_pages * nodes->cnt - 1, 0, 0, 0,
 			nr_pages * nodes->cnt);
 
-	SAFE_FILE_PRINTF(PATH_KSM "run", "2");
+	SAFE_FILE_PRINTF(MM_KSM_FP("run"), "2");
 	tst_res(TINFO, "Start to test KSM with merge_across_nodes=0");
-	SAFE_FILE_PRINTF(PATH_KSM "merge_across_nodes", "0");
-	SAFE_FILE_PRINTF(PATH_KSM "run", "1");
+	SAFE_FILE_PRINTF(MM_KSM_FP("merge_across_nodes"), "0");
+	SAFE_FILE_PRINTF(MM_KSM_FP("run"), "1");
 	ksm_group_check(1, nodes->cnt, nr_pages * nodes->cnt - nodes->cnt,
 			0, 0, 0, nr_pages * nodes->cnt);
 
-	SAFE_FILE_PRINTF(PATH_KSM "run", "2");
+	SAFE_FILE_PRINTF(MM_KSM_FP("run"), "2");
 
 	for (i = 0; i < nodes->cnt; i++)
 		SAFE_MUNMAP(memory[i], length);
@@ -132,12 +132,12 @@ static struct tst_test test = {
 	},
 	.setup = setup,
 	.save_restore = (const struct tst_path_val[]) {
-		{"/sys/kernel/mm/ksm/max_page_sharing", NULL,
+		{MM_KSM_FP("max_page_sharing"), NULL,
 			TST_SR_SKIP_MISSING | TST_SR_TCONF_RO},
-		{"/sys/kernel/mm/ksm/run", NULL, TST_SR_TBROK},
-		{"/sys/kernel/mm/ksm/sleep_millisecs", NULL, TST_SR_TBROK},
-		{"/sys/kernel/mm/ksm/merge_across_nodes", NULL, TST_SR_TCONF},
-		{"/sys/kernel/mm/ksm/smart_scan", "0",
+		{MM_KSM_FP("run"), NULL, TST_SR_TBROK},
+		{MM_KSM_FP("sleep_millisecs"), NULL, TST_SR_TBROK},
+		{MM_KSM_FP("merge_across_nodes"), NULL, TST_SR_TCONF},
+		{MM_KSM_FP("smart_scan"), "0",
 			TST_SR_SKIP_MISSING | TST_SR_TBROK_RO},
 		{}
 	},
