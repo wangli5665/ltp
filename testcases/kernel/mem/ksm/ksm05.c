@@ -93,8 +93,8 @@ static struct tst_test test = {
 	.forks_child = 1,
 	.test_all = test_ksm,
 	.save_restore = (const struct tst_path_val[]) {
-		{"/sys/kernel/mm/ksm/run", "1", TST_SR_TBROK},
-		{"/sys/kernel/mm/ksm/smart_scan", "0",
+		{MM_KSM_FP("run"), "1", TST_SR_TBROK},
+		{MM_KSM_FP("smart_scan"), "0",
 			TST_SR_SKIP_MISSING | TST_SR_TBROK_RO},
 		{}
 	},
